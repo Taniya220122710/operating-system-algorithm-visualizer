@@ -1,0 +1,323 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>OS Algo Visualizer – Memory Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 960px;
+      margin: auto;
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #1e3a8a;
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    input, select, button {
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover {
+      background-color: #1e40af;
+    }
+    .block-container {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .block {
+      width: 80px;
+      height: 40px;
+      border: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e5e7eb;
+      border-radius: 4px;
+    }
+    .process.unallocated {
+      color: #6b7280;
+      font-style: italic;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.6rem;
+      text-align: center;
+    }
+    th {
+      background-color: #e5e7eb;
+    }
+    nav { 
+      text-align: center; 
+      margin: 1.5rem 0; 
+    }
+    nav a {
+      display: inline-block;
+      margin: 0 0.5rem;
+      padding: 0.6rem 1rem;
+      background-color: #2563eb;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    nav a:hover { 
+      background-color: #1e40af; 
+    }
+    .tabs {
+      display: flex;
+      justify-content: center;
+      margin-top: 2rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .tab {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active {
+      border-bottom-color: #2563eb;
+      color: #2563eb;
+      font-weight: 500;
+    }
+    .tab-content {
+      display: none;
+      padding: 1.5rem;
+      background: #f9fafb;
+      border-radius: 0 0 8px 8px;
+      margin-top: 0.5rem;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .algo-info {
+      margin-top: 2rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .algo-header {
+      background: #f9fafb;
+      padding: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    ul {
+      margin-left: 1.5rem;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 2rem;
+      text-decoration: none;
+      color: #2563eb;
+      font-weight: 500;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>OS Algorithm Visualizer</h1>
+
+    <nav>
+      <nav>
+        <a href="cpu_scheduling.html">CPU Scheduling</a>
+        <a href="disk_management.html">Disk Scheduling</a>
+        <a href="memory_management.html">Memory Management</a>
+      </nav>
+    </nav>
+
+    <h2>Memory Management</h2>
+
+    <div class="controls">
+      <input type="text" id="blocks" placeholder="Blocks (e.g. 100,500,200)" size="40">
+      <input type="text" id="processes" placeholder="Process Sizes (e.g. 212,417)" size="40">
+      <select id="memoryAlgo">
+        <option value="firstFit">First Fit</option>
+        <option value="bestFit">Best Fit</option>
+        <option value="worstFit">Worst Fit</option>
+      </select>
+      <button onclick="allocateMemory()">Allocate</button>
+      <button onclick="resetMemory()">Reset</button>
+    </div>
+
+    <div class="block-container" id="blockContainer"></div>
+
+    <table>
+      <thead>
+        <tr><th>Block #</th><th>Size</th><th>Allocated Process</th></tr>
+      </thead>
+      <tbody id="memoryTableBody"></tbody>
+    </table>
+
+    <div class="algo-info">
+      <div class="algo-header">
+        <h3>Memory Allocation Algorithms</h3>
+        <p>Learn about different memory allocation strategies</p>
+      </div>
+      <div class="tabs">
+        <div class="tab active" onclick="showTab('firstFit')">First Fit</div>
+        <div class="tab" onclick="showTab('bestFit')">Best Fit</div>
+        <div class="tab" onclick="showTab('worstFit')">Worst Fit</div>
+      </div>
+      
+      <div id="firstFit" class="tab-content active">
+        <h3>First Fit Algorithm</h3>
+        <p>The First Fit algorithm allocates the first memory block that is large enough to accommodate the process. This algorithm is simple and fast, but it can lead to fragmentation over time.</p>
+        <ul>
+          <li>Scans memory from beginning to end</li>
+          <li>Allocates process to the first block that is large enough</li>
+          <li>Time Complexity: O(n) where n is the number of memory blocks</li>
+          <li>Typically faster than Best Fit and Worst Fit</li>
+        </ul>
+      </div>
+      
+      <div id="bestFit" class="tab-content">
+        <h3>Best Fit Algorithm</h3>
+        <p>The Best Fit algorithm allocates the smallest memory block that can accommodate the process. This approach minimizes wasted memory but requires searching the entire list of memory blocks.</p>
+        <ul>
+          <li>Allocates process to the smallest block that is large enough</li>
+          <li>Aims to minimize the amount of wasted memory</li>
+          <li>Time Complexity: O(n) where n is the number of memory blocks</li>
+          <li>Creates the smallest unusable fragments</li>
+        </ul>
+      </div>
+      
+      <div id="worstFit" class="tab-content">
+        <h3>Worst Fit Algorithm</h3>
+        <p>The Worst Fit algorithm allocates the largest memory block available. This approach aims to leave larger remaining fragments which may be more useful for future allocations.</p>
+        <ul>
+          <li>Allocates process to the largest block available</li>
+          <li>Leaves the largest possible leftover space</li>
+          <li>Time Complexity: O(n) where n is the number of memory blocks</li>
+          <li>Attempts to reduce the creation of very small unusable fragments</li>
+        </ul>
+      </div>
+    </div>
+    <a href="index.html" class="back-link">← Back to Home</a>
+  </div>
+
+  <script>
+    function allocateMemory() {
+      const blocks = document.getElementById("blocks").value
+                       .split(',').map(Number);
+      const procs = document.getElementById("processes").value
+                       .split(',').map(Number);
+      const algo = document.getElementById("memoryAlgo").value;
+      if (blocks.some(isNaN) || procs.some(isNaN))
+        return alert("Enter valid inputs.");
+
+      const allocations = Array(blocks.length).fill(null);
+
+      procs.forEach((pSize,pIdx) => {
+        let chosen = -1;
+        blocks.forEach((bSize,bIdx) => {
+          if (allocations[bIdx] === null && bSize >= pSize) {
+            if (algo==="firstFit" && chosen===-1) chosen = bIdx;
+            else if (algo==="bestFit") {
+              if (chosen===-1 || blocks[bIdx]<blocks[chosen])
+                chosen = bIdx;
+            }
+            else if (algo==="worstFit") {
+              if (chosen===-1 || blocks[bIdx]>blocks[chosen])
+                chosen = bIdx;
+            }
+          }
+        });
+        if (chosen!==-1)
+          allocations[chosen] = `P${pIdx+1} (${pSize})`;
+      });
+
+      // Visual blocks
+      const bc = document.getElementById("blockContainer");
+      bc.innerHTML = "";
+      blocks.forEach((size,i)=>{
+        const div = document.createElement("div");
+        div.className = "block";
+        const lbl = document.createElement("div");
+        lbl.className = "process";
+        lbl.innerText = allocations[i]||"Free";
+        if (!allocations[i]) lbl.classList.add("unallocated");
+        div.appendChild(lbl);
+        bc.appendChild(div);
+      });
+
+      // Table
+      const tbody = document.getElementById("memoryTableBody");
+      tbody.innerHTML = "";
+      blocks.forEach((b,i)=>{
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${i+1}</td><td>${b}</td><td>${allocations[i]||"Unallocated"}</td>`;
+      });
+    }
+
+    function resetMemory() {
+      document.getElementById("blocks").value = "";
+      document.getElementById("processes").value = "";
+      document.getElementById("blockContainer").innerHTML = "";
+      document.getElementById("memoryTableBody").innerHTML = "";
+    }
+
+    function showTab(tabId) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show selected tab
+      document.getElementById(tabId).classList.add('active');
+      
+      // Highlight tab button
+      document.querySelectorAll('.tab').forEach(tab => {
+        if (tab.textContent.toLowerCase().includes(tabId.toLowerCase())) {
+          tab.classList.add('active');
+        }
+      });
+    }
+
+    // Automatically change tabs when algorithm is changed
+    document.getElementById('memoryAlgo').addEventListener('change', function() {
+      showTab(this.value);
+    });
+  </script>
+</body>
+</html>

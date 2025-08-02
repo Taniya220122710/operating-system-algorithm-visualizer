@@ -1,0 +1,589 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disk Scheduling Visualizer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #f3f4f6;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 24px;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    
+    h1 {
+      color: #4338ca;
+      margin-bottom: 8px;
+    }
+    
+    .description {
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+    
+    .inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+    
+    input {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+      justify-content: center;
+    }
+    
+    button {
+      background-color: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    button:hover {
+      background-color: #4338ca;
+      transform: translateY(-1px);
+    }
+    
+    button.reset {
+      background-color: #ef4444;
+    }
+    
+    button.reset:hover {
+      background-color: #dc2626;
+    }
+    
+    .canvas-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+    
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background-color: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+    }
+    
+    .results {
+      margin-top: 24px;
+      overflow-x: auto;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    th {
+      background-color: #f9fafb;
+      font-weight: 600;
+      color: #4b5563;
+    }
+    
+    tr:hover {
+      background-color: #f9fafb;
+    }
+    
+    .algorithm-info {
+      margin-top: 24px;
+      padding: 16px;
+      background-color: #f3f4f6;
+      border-radius: 8px;
+      border-left: 4px solid #4f46e5;
+    }
+    
+    .algorithm-info h3 {
+      margin-top: 0;
+      color: #4338ca;
+    }
+    
+    .algorithm-info ul {
+      padding-left: 20px;
+    }
+    
+    .algorithm-info li {
+      margin-bottom: 8px;
+    }
+    
+    @media (max-width: 768px) {
+      .inputs {
+        flex-direction: column;
+      }
+      
+      input {
+        width: 100%;
+      }
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 2rem;
+      text-decoration: none;
+      color: #2563eb;
+      font-weight: 500;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Disk Scheduling Visualizer</h1>
+      <p class="description">Visualize and compare different disk scheduling algorithms</p>
+    </header>
+    
+    <div class="inputs">
+      <input type="number" id="head" placeholder="Initial head position (e.g., 53)" value="53" />
+      <input type="text" id="requests" placeholder="Request positions (comma separated)" value="98, 183, 37, 122, 14, 124, 65, 67" />
+      <input type="number" id="diskSize" placeholder="Total disk size" value="200" />
+    </div>
+    
+    <div class="buttons">
+      <button onclick="runAlgorithm('fcfs')">FCFS</button>
+      <button onclick="runAlgorithm('sstf')">SSTF</button>
+      <button onclick="runAlgorithm('scan')">SCAN</button>
+      <button onclick="runAlgorithm('cscan')">C-SCAN</button>
+      <button onclick="runAlgorithm('look')">LOOK</button>
+      <button onclick="runAlgorithm('clook')">C-LOOK</button>
+      <button class="reset" onclick="resetVisualization()">Reset</button>
+    </div>
+    
+    <div class="canvas-container">
+      <canvas id="diskCanvas" width="900" height="400"></canvas>
+    </div>
+    
+    <div class="results">
+      <h2>Results</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Algorithm</th>
+            <th>Movement Sequence</th>
+            <th>Total Movements</th>
+          </tr>
+        </thead>
+        <tbody id="resultsTable">
+          <!-- Results will be added here -->
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="algorithm-info" id="algoInfo">
+      <h3>Algorithm Information</h3>
+      <p>Select an algorithm above to see its description and characteristics.</p>
+    </div>
+    <a href="index.html" class="back-link">← Back to Home</a>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('diskCanvas');
+    const ctx = canvas.getContext('2d');
+    const baseY = 80;
+    const spacingY = 40;
+    const delay = 600;
+    
+    // Algorithm descriptions
+    const algoDescriptions = {
+      fcfs: `
+        <h3>First-Come, First-Served (FCFS)</h3>
+        <p>FCFS is the simplest disk scheduling algorithm that services requests in the exact order they arrive.</p>
+        <h4>Characteristics:</h4>
+        <ul>
+          <li>Simple to implement</li>
+          <li>Fair in the sense that requests are processed in order of arrival</li>
+          <li>Can lead to "wild swings" in disk head movement, resulting in poor performance</li>
+          <li>Not optimal in terms of seek time</li>
+        </ul>
+      `,
+      sstf: `
+        <h3>Shortest Seek Time First (SSTF)</h3>
+        <p>SSTF selects the request that requires the least head movement from the current position.</p>
+        <h4>Characteristics:</h4>
+        <ul>
+          <li>Better performance than FCFS</li>
+          <li>Can cause starvation of some requests if new requests keep arriving</li>
+          <li>Favors middle areas of the disk</li>
+          <li>Not optimal for high-traffic systems</li>
+        </ul>
+      `,
+      scan: `
+        <h3>SCAN (Elevator Algorithm)</h3>
+        <p>The disk arm moves in one direction servicing requests until it reaches the end, then reverses direction.</p>
+        <h4>Characteristics:</h4>
+        <ul>
+          <li>Provides better performance than FCFS</li>
+          <li>Prevents starvation of requests</li>
+          <li>More uniform wait times than FCFS or SSTF</li>
+          <li>The disk arm moves all the way to the end of the disk</li>
+        </ul>
+      `,
+      cscan: `
+        <h3>C-SCAN (Circular SCAN)</h3>
+        <p>Similar to SCAN, but the disk arm only services requests when moving in one direction and jumps back to the beginning.</p>
+        <h4>Characteristics:</h4>
+        <ul>
+          <li>Provides more uniform wait times than SCAN</li>
+          <li>Treats the disk as a circular list</li>
+          <li>Reduces maximum response time</li>
+          <li>Moves the head from one end to the other, servicing requests only in one direction</li>
+        </ul>
+      `,
+      look: `
+        <h3>LOOK Algorithm</h3>
+        <p>A variation of SCAN where the arm only goes as far as the last request in a direction, then reverses.</p>
+        <h4>Characteristics:</h4>
+        <ul>
+          <li>More efficient than SCAN as it doesn't go to the disk ends unnecessarily</li>
+          <li>Maintains the direction-based servicing of SCAN</li>
+          <li>Reduces unnecessary head movements</li>
+          <li>Good balance of efficiency and fairness</li>
+        </ul>
+      `,
+      clook: `
+        <h3>C-LOOK Algorithm</h3>
+        <p>Like C-SCAN but only goes as far as the last request in the direction, then jumps back to the other side.</p>
+        <h4>Characteristics:</h4>
+        <ul>
+          <li>Combines the benefits of C-SCAN and LOOK</li>
+          <li>More efficient than C-SCAN</li>
+          <li>Maintains uniform wait times</li>
+          <li>Good for heavily loaded systems</li>
+        </ul>
+      `
+    };
+    
+    function parseRequests() {
+      return document.getElementById('requests').value
+        .split(',')
+        .map(x => parseInt(x.trim()))
+        .filter(x => !isNaN(x));
+    }
+    
+    function validateInputs() {
+      const head = parseInt(document.getElementById('head').value);
+      const requests = parseRequests();
+      
+      if (isNaN(head) || head < 0) {
+        alert('Please enter a valid initial head position (non-negative number)');
+        return false;
+      }
+      
+      if (requests.length < 2) {
+        alert('Please enter at least 2 valid request positions');
+        return false;
+      }
+      
+      return true;
+    }
+    
+    function drawDiskVisualization(sequence, algorithm) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const scale = canvas.width / (parseInt(document.getElementById('diskSize').value) || 200);
+      
+      // Draw horizontal line representing disk
+      ctx.beginPath();
+      ctx.moveTo(0, baseY - 10);
+      ctx.lineTo(canvas.width, baseY - 10);
+      ctx.strokeStyle = "#d1d5db";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      // Add cylinder numbers at regular intervals
+      const maxCylinder = parseInt(document.getElementById('diskSize').value) || 200;
+      const interval = Math.ceil(maxCylinder / 10);
+      
+      for (let i = 0; i <= maxCylinder; i += interval) {
+        const x = i * scale;
+        if (x < canvas.width) {
+          ctx.beginPath();
+          ctx.moveTo(x, baseY - 15);
+          ctx.lineTo(x, baseY - 5);
+          ctx.strokeStyle = "#9ca3af";
+          ctx.stroke();
+          ctx.fillStyle = "#6b7280";
+          ctx.font = '10px Arial';
+          ctx.fillText(i.toString(), x - 10, baseY - 20);
+        }
+      }
+      
+      // Draw points for each cylinder in the sequence
+      const points = sequence.map(cyl => ({ x: cyl * scale, y: 0 }));
+      
+      points.forEach((pt, i) => {
+        pt.y = baseY + i * spacingY;
+        
+        // Mark the initial head position differently
+        if (i === 0) {
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 6, 0, 2 * Math.PI);
+          ctx.fillStyle = "#4f46e5";
+          ctx.fill();
+          ctx.strokeStyle = "#312e81";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = "#ffffff";
+          ctx.font = '10px Arial';
+          ctx.fillText("H", pt.x - 3, pt.y + 3);
+          ctx.fillStyle = "#4338ca";
+          ctx.font = '12px Arial';
+          ctx.fillText(sequence[i].toString(), pt.x + 10, pt.y - 8);
+        } else {
+          // Draw regular points
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 5, 0, 2 * Math.PI);
+          ctx.fillStyle = "#6366f1";
+          ctx.fill();
+          ctx.fillStyle = "#312e81";
+          ctx.font = '12px Arial';
+          ctx.fillText(sequence[i].toString(), pt.x + 10, pt.y - 8);
+        }
+      });
+      
+      // Animate lines connecting the points
+      let i = 0;
+      function animateLine() {
+        if (i >= points.length - 1) return;
+        
+        const startX = points[i].x;
+        const startY = points[i].y;
+        const endX = points[i + 1].x;
+        const endY = points[i + 1].y;
+        
+        // Draw line
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.strokeStyle = "#4f46e5";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Draw arrow at the end
+        const angle = Math.atan2(endY - startY, endX - startX);
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(
+          endX - 8 * Math.cos(angle - Math.PI / 6),
+          endY - 8 * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+          endX - 8 * Math.cos(angle + Math.PI / 6),
+          endY - 8 * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fillStyle = "#4f46e5";
+        ctx.fill();
+        
+        i++;
+        setTimeout(animateLine, delay);
+      }
+      
+      // Start animation
+      setTimeout(animateLine, delay);
+      
+      // Update algorithm info
+      document.getElementById('algoInfo').innerHTML = algoDescriptions[algorithm];
+    }
+    
+    // Algorithm implementations
+    function fcfsAlgorithm(requests, head) {
+      return [head, ...requests];
+    }
+    
+    function sstfAlgorithm(requests, head) {
+      const result = [head];
+      let current = head;
+      let unserviced = [...requests];
+      
+      while (unserviced.length > 0) {
+        // Find the closest request to current position
+        let minDistance = Infinity;
+        let nextIndex = -1;
+        
+        unserviced.forEach((req, i) => {
+          const distance = Math.abs(req - current);
+          if (distance < minDistance) {
+            minDistance = distance;
+            nextIndex = i;
+          }
+        });
+        
+        current = unserviced[nextIndex];
+        result.push(current);
+        unserviced.splice(nextIndex, 1);
+      }
+      
+      return result;
+    }
+    
+    function scanAlgorithm(requests, head) {
+      const diskSize = parseInt(document.getElementById('diskSize').value) || 200;
+      const left = requests.filter(r => r < head).sort((a, b) => b - a);
+      const right = requests.filter(r => r >= head).sort((a, b) => a - b);
+      
+      // If the head is moving right, it will go all the way to the end
+      right.push(diskSize - 1);
+      
+      return [head, ...right, ...left];
+    }
+    
+    function cscanAlgorithm(requests, head) {
+      const diskSize = parseInt(document.getElementById('diskSize').value) || 200;
+      const left = requests.filter(r => r < head).sort((a, b) => a - b);
+      const right = requests.filter(r => r >= head).sort((a, b) => a - b);
+      
+      // Go to the end, then jump to beginning
+      right.push(diskSize - 1);
+      if (left.length > 0) {
+        right.push(0); // Jump to the beginning
+      }
+      
+      return [head, ...right, ...left];
+    }
+    
+    function lookAlgorithm(requests, head) {
+      const left = requests.filter(r => r < head).sort((a, b) => b - a);
+      const right = requests.filter(r => r >= head).sort((a, b) => a - b);
+      
+      // Don't go to the end of disk, just the farthest request
+      return [head, ...right, ...left];
+    }
+    
+    function clookAlgorithm(requests, head) {
+      const left = requests.filter(r => r < head).sort((a, b) => a - b);
+      const right = requests.filter(r => r >= head).sort((a, b) => a - b);
+      
+      // Don't go to the end, and jump back to lowest request
+      return [head, ...right, ...left];
+    }
+    
+    function calculateMovements(sequence) {
+      return sequence.slice(1)
+        .reduce((sum, val, i) => sum + Math.abs(val - sequence[i]), 0);
+    }
+    
+    function updateResultsTable(sequence, algorithm) {
+      const algoNames = {
+        'fcfs': 'FCFS',
+        'sstf': 'SSTF',
+        'scan': 'SCAN',
+        'cscan': 'C-SCAN',
+        'look': 'LOOK',
+        'clook': 'C-LOOK'
+      };
+      
+      const movements = calculateMovements(sequence);
+      
+      const tbody = document.getElementById('resultsTable');
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${algoNames[algorithm]}</td>
+        <td class="sequence-cell">${sequence.join(' → ')}</td>
+        <td>${movements}</td>
+      `;
+      
+      tbody.appendChild(row);
+    }
+    
+    function runAlgorithm(algorithm) {
+      if (!validateInputs()) return;
+      
+      const head = parseInt(document.getElementById('head').value);
+      const requests = parseRequests();
+      let sequence;
+      
+      switch (algorithm) {
+        case 'fcfs':
+          sequence = fcfsAlgorithm(requests, head);
+          break;
+        case 'sstf':
+          sequence = sstfAlgorithm(requests, head);
+          break;
+        case 'scan':
+          sequence = scanAlgorithm(requests, head);
+          break;
+        case 'cscan':
+          sequence = cscanAlgorithm(requests, head);
+          break;
+        case 'look':
+          sequence = lookAlgorithm(requests, head);
+          break;
+        case 'clook':
+          sequence = clookAlgorithm(requests, head);
+          break;
+        default:
+          alert('Unknown algorithm');
+          return;
+      }
+      
+      drawDiskVisualization(sequence, algorithm);
+      updateResultsTable(sequence, algorithm);
+    }
+    
+    function resetVisualization() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById('resultsTable').innerHTML = '';
+      document.getElementById('algoInfo').innerHTML = `
+        <h3>Algorithm Information</h3>
+        <p>Select an algorithm above to see its description and characteristics.</p>
+      `;
+    }
+    
+    // Initial canvas setup
+    window.onload = function() {
+      ctx.font = '12px Arial';
+      ctx.fillStyle = "#6b7280";
+      ctx.fillText("Select an algorithm to start the visualization", canvas.width/2 - 150, canvas.height/2);
+    };
+  </script>
+</body>
+</html>

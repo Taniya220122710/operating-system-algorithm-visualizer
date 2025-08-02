@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Virtual File System – OS Algo Visualizer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #1e3a8a;
+      margin-bottom: 1rem;
+    }
+    #terminal {
+      background: #0d0d0d;
+      color: #00ff00;
+      padding: 1rem;
+      height: 350px;
+      overflow-y: auto;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      resize: vertical;
+    }
+    #input {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      margin-top: 1rem;
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      background: #f0f4ff;
+    }
+    .file {
+      color: #00bfff;
+    }
+    .dir {
+      color: #7fff00;
+    }
+    .error {
+      color: #ff4444;
+    }
+    .command {
+      color: #ffffff;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 2rem;
+      text-decoration: none;
+      color: #2563eb;
+      font-weight: 500;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Virtual File System</h2>
+    <div id="terminal"></div>
+    <input id="input" placeholder="Enter command..." onkeydown="if(event.key==='Enter') runCommand()"/>
+    <a href="index.html" class="back-link">← Back to Home</a>
+  </div>
+
+  <script>
+    const terminal = document.getElementById("terminal");
+    const input = document.getElementById("input");
+
+    const fs = { name: "/", type: "dir", children: [] };
+    let current = fs;
+    const pathStack = [fs];
+
+    function print(msg = "", type = "") {
+      const span = document.createElement("div");
+      span.innerHTML = type === "error" ? `<span class="error">${msg}</span>` : msg;
+      terminal.appendChild(span);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function prompt() {
+      const path = pathStack.map(p => p.name).join("/") || "/";
+      print(`<span class="command">user@os:${path}$</span>`);
+    }
+
+    function runCommand() {
+      const cmd = input.value.trim();
+      if (cmd === "") return;
+      print(`<span class="command">> ${cmd}</span>`);
+      execute(cmd);
+      input.value = "";
+      prompt();
+    }
+
+    function findChild(dir, name) {
+      return dir.children.find(c => c.name === name);
+    }
+
+    function execute(command) {
+      const [cmd, ...args] = command.split(" ");
+
+      switch (cmd) {
+        case "mkdir":
+          if (!args[0]) return print("Usage: mkdir <dir>", "error");
+          if (findChild(current, args[0])) return print("Directory already exists", "error");
+          current.children.push({ name: args[0], type: "dir", children: [] });
+          break;
+
+        case "touch":
+          if (!args[0]) return print("Usage: touch <file>", "error");
+          if (findChild(current, args[0])) return print("File already exists", "error");
+          current.children.push({ name: args[0], type: "file" });
+          break;
+
+        case "rm":
+          if (!args[0]) return print("Usage: rm <name>", "error");
+          const index = current.children.findIndex(c => c.name === args[0]);
+          if (index === -1) return print("No such file or directory", "error");
+          current.children.splice(index, 1);
+          break;
+
+        case "ls":
+          if (current.children.length === 0) {
+            print("[empty]");
+          } else {
+            current.children.forEach(c => {
+              print(`<span class="${c.type}">${c.name}${c.type === "dir" ? "/" : ""}</span>`);
+            });
+          }
+          break;
+
+        case "cd":
+          if (!args[0]) return print("Usage: cd <dir>", "error");
+          if (args[0] === "..") {
+            if (pathStack.length > 1) {
+              pathStack.pop();
+              current = pathStack[pathStack.length - 1];
+            }
+          } else {
+            const dir = findChild(current, args[0]);
+            if (!dir || dir.type !== "dir") return print("No such directory", "error");
+            pathStack.push(dir);
+            current = dir;
+          }
+          break;
+
+        case "pwd":
+          print(pathStack.map(p => p.name).join("/") || "/");
+          break;
+
+        case "tree":
+          function drawTree(node, indent = "") {
+            print(`${indent}${node.type === "dir" ? "📁" : "📄"} ${node.name}`);
+            if (node.children) {
+              node.children.forEach(child => drawTree(child, indent + "  "));
+            }
+          }
+          drawTree(fs);
+          break;
+
+        case "clear":
+          terminal.innerHTML = "";
+          break;
+
+        case "help":
+          print(`Available commands:
+  📁 mkdir <dir>   – create directory
+  📄 touch <file>  – create file
+  ❌ rm <name>     – remove file or directory
+  📂 cd <dir>      – change directory
+  ⬆️ cd ..         – go up one level
+  📃 ls            – list contents
+  🧭 pwd           – show current path
+  🌲 tree          – show full file system
+  🧼 clear         – clear the terminal
+  ❓ help          – show this message`);
+          break;
+
+        default:
+          print(`Unknown command: ${cmd}`, "error");
+      }
+    }
+
+    // Auto-focus and start prompt
+    input.focus();
+    print("📂 Virtual File System started. Type 'help' for a list of commands.");
+    prompt();
+  </script>
+</body>
+</html>
