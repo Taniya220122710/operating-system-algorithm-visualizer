@@ -1,4 +1,4 @@
-# Operating System Algorithm Visualizer
+<img width="1896" height="904" alt="Screenshot 2025-08-02 180545" src="https://github.com/user-attachments/assets/909d8bba-4d14-4da2-b0aa-82fc4d0ac094" /># Operating System Algorithm Visualizer
 
 # Abstract
 
@@ -29,7 +29,7 @@ It covers 4 major modules of the Operating System subject:
   - Calculates CT, TAT, WT, RT
   - CPU Utilization, Throughput, Average times
   - Play, Pause, Reset functionality
-
+    
 ### 2️⃣ Disk Scheduling
 
 - Algorithms:
@@ -90,4 +90,6 @@ Add support for persistent virtual file system
 # Conclusion
 
 This project effectively demonstrates core OS algorithms through interactive visualizations. It is a useful learning tool for students and educators alike, and helps bridge the gap between theoretical learning and practical understanding.
+
+<img width="1919" height="884" alt="image" src="https://github.com/user-attachments/assets/507bb8f5-aa3f-4f4f-8e6f-b216c8559916" />
 
